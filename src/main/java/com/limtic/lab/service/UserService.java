@@ -20,6 +20,10 @@ public class UserService {
 
     private final Path uploadDir = Paths.get("uploads");
 
+     public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
     public UserService() {
         try {
             Files.createDirectories(uploadDir);

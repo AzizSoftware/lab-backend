@@ -1,5 +1,6 @@
 package com.limtic.lab.controller;
 
+
 import com.limtic.lab.model.FileDocument;
 import com.limtic.lab.model.User;
 import com.limtic.lab.repository.UserRepository;
@@ -38,6 +39,11 @@ public class UserController {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+
+    @GetMapping
+    public List<User> getAllUsers() {
+        return userService.getAllUsers();
+    }
     // -------------------- AUTH --------------------
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
