@@ -1,27 +1,95 @@
 package com.limtic.lab.config;
 
-import com.limtic.lab.util.JwtUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtUtil jwtUtil;
+    private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
     }
 
     @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        // ---------------- PUBLIC ----------------
+                        .requestMatchers(HttpMethod.POST, "/api/users/signup", "/api/users/login").permitAll()
+
+                        // ---------------- USERS ----------------
+                        .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/{email}")
+                        .hasAnyRole("User", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/users/{email}")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/users/{email}/uploads", "/api/users/{email}/photo")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/uploads/**")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/users/{email}/role")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // ---------------- PROJECTS ----------------
+                        .requestMatchers(HttpMethod.GET, "/api/projects/**")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/projects")
+                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/{id}", "/api/projects/{id}/addMember/**")
+                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/projects/{id}")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // ---------------- FILES ----------------
+                        .requestMatchers(HttpMethod.GET, "/api/files/**")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/files").hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/files/{id}")
+                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/files/{id}")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // ---------------- EVENTS ----------------
+                        .requestMatchers(HttpMethod.GET, "/api/events/**")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/events").hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/events/{id}")
+                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/events/{id}")
+                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/events/{id}/enroll/**")
+                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+
+                        // ---------------- DASHBOARD ----------------
+                        .requestMatchers(HttpMethod.GET, "/api/dashboard")
+                        .hasAnyRole("VISITOR", "USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+
+                        // ---------------- ADMIN ONLY ----------------
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // All other requests require authentication
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
@@ -29,65 +97,4 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable()) // Disable CSRF
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/**").permitAll() // Allow all endpoints temporarily for testing
-            )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
 }
-
-/*package com.limtic.lab.config;
-
-import com.limtic.lab.util.JwtUtil;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-@Configuration
-public class SecurityConfig {
-
-    private final JwtUtil jwtUtil;
-
-    public SecurityConfig(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
-
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable()) // Disable CSRF
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").permitAll() //.requestMatchers("/api/users/**").hasAnyAuthority("USER", "ADMIN")
-                //.anyRequest().authenticated()
-            )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-}
- */
