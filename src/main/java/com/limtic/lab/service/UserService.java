@@ -57,24 +57,36 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User addFileToUser(String email, MultipartFile file, String description, String type) throws IOException {
+    public User addFileToUser(
+        String email,
+        MultipartFile file,
+        String title,
+        List<String> authors,
+        List<String> affiliations,
+        LocalDate publicationDate,
+        String abstractText,
+        List<String> keywords,
+        String doi
+    ) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
         String uniqueFilename = UUID.randomUUID() + extension;
         Path filePath = uploadDir.resolve(uniqueFilename);
-
         Files.write(filePath, file.getBytes());
 
         User user = userRepository.findByEmail(email)
                 .orElse(User.builder().email(email).createdAt(LocalDate.now()).build());
 
         FileDocument fileDoc = new FileDocument();
-        fileDoc.setTitle(originalFilename);
+        fileDoc.setTitle(title != null ? title : originalFilename);
+        fileDoc.setAuthors(authors);
+        fileDoc.setAffiliations(affiliations);
+        fileDoc.setPublicationDate(publicationDate);
+        fileDoc.setAbstractText(abstractText);
+        fileDoc.setKeywords(keywords);
+        fileDoc.setDoi(doi != null ? doi : UUID.randomUUID().toString());
         fileDoc.setOwnerId(user.getId());
         fileDoc.setUploadedAt(LocalDate.now());
-        fileDoc.setAbstractText(description);
-        fileDoc.setKeywords(List.of(type));
-        fileDoc.setDoi(UUID.randomUUID().toString()); // generate dummy DOI
 
         if (user.getUploads() == null) {
             user.setUploads(new ArrayList<>());
@@ -84,6 +96,7 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
 
     public User uploadProfilePhoto(String email, MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();

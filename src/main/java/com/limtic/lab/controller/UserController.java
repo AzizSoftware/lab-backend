@@ -1,6 +1,5 @@
 package com.limtic.lab.controller;
 
-
 import com.limtic.lab.model.FileDocument;
 import com.limtic.lab.model.User;
 import com.limtic.lab.repository.UserRepository;
@@ -10,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -85,11 +85,17 @@ public class UserController {
     public User uploadFile(
             @PathVariable String email,
             @RequestParam("file") MultipartFile file,
-            @RequestParam("description") String description,
-            @RequestParam("type") String type
+            @RequestParam String title,
+            @RequestParam List<String> authors,
+            @RequestParam List<String> affiliations,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate publicationDate,
+            @RequestParam String abstractText,
+            @RequestParam List<String> keywords,
+            @RequestParam(required = false) String doi
     ) throws IOException {
-        if (file.isEmpty()) throw new IllegalArgumentException("File cannot be empty");
-        return userService.addFileToUser(email, file, description, type);
+        return userService.addFileToUser(
+                email, file, title, authors, affiliations, publicationDate, abstractText, keywords, doi
+        );
     }
 
     @PostMapping("/{email}/photo")
