@@ -1,6 +1,8 @@
 package com.limtic.lab.controller;
 
+import com.limtic.lab.config.AdminCredentialsConfig;
 import com.limtic.lab.model.FileDocument;
+import com.limtic.lab.model.RoleEnum;
 import com.limtic.lab.model.User;
 import com.limtic.lab.repository.UserRepository;
 import com.limtic.lab.service.UserService;
@@ -37,6 +39,9 @@ public class UserController {
     @Autowired
     private final JwtUtil jwtUtil;
 
+    @Autowired
+    private final AdminCredentialsConfig adminConfig;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 
@@ -45,29 +50,44 @@ public class UserController {
         return userService.getAllUsers();
     }
     // -------------------- AUTH --------------------
-    @PostMapping("/signup")
+     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Email already in use");
         }
 
+        // Normal user signup → status = PENDING, role = USER
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("USER");
+        user.setRoleEnum(RoleEnum.USER);
+        user.setStatus("PENDING");
         user.setCreatedAt(LocalDate.now());
         user.setUpdatedAt(LocalDate.now());
-        User saved = userRepository.save(user);
+        userRepository.save(user);
 
-        String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole());
-        return ResponseEntity.ok(token);
+        //todo: trigger email notification to admin about new pending user
+
+        return ResponseEntity.ok("Registration successful. Pending admin approval.");
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
+
+        // -------------------- Admin login --------------------
+        if (loginRequest.getEmail().equals(adminConfig.getEmail()) &&
+            passwordEncoder.matches(loginRequest.getPassword(), adminConfig.getPassword())) {
+
+            String token = jwtUtil.generateToken(adminConfig.getEmail(), adminConfig.getRole());
+            return ResponseEntity.ok(token);
+        }
+
+        // -------------------- Normal user login --------------------
         return userRepository.findByEmail(loginRequest.getEmail())
                 .filter(u -> passwordEncoder.matches(loginRequest.getPassword(), u.getPassword()))
+                .filter(u -> "APPROVED".equals(u.getStatus())) // only approved users
                 .map(u -> ResponseEntity.ok(jwtUtil.generateToken(u.getEmail(), u.getRole())))
-                .orElse(ResponseEntity.status(401).body("Invalid credentials"));
+                .orElse(ResponseEntity.status(401).body("Invalid credentials or not approved"));
     }
+
 
     // -------------------- USER INFO --------------------
     @GetMapping("/{email}")
