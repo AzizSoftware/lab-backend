@@ -19,7 +19,9 @@ public class User {
 
     private String email;
     private String password;
-    private String role; // "USER", "ADMIN"
+
+    private String role;   // stored as string in DB, but will use RoleEnum in code
+    private String status; // "PENDING", "APPROVED", "DECLINED"
 
     private String firstName;
     private String lastName;
@@ -39,4 +41,16 @@ public class User {
 
     // All documents uploaded by this user
     private List<FileDocument> uploads;
+
+    // ---------------------------
+    // Helper methods for enum
+    // ---------------------------
+
+    public void setRoleEnum(RoleEnum roleEnum) {
+        this.role = roleEnum.name();
+    }
+
+    public RoleEnum getRoleEnum() {
+        return RoleEnum.valueOf(this.role);
+    }
 }
