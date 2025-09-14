@@ -2,6 +2,7 @@ package com.limtic.lab.service;
 
 import com.limtic.lab.model.FileDocument;
 import com.limtic.lab.model.User;
+import com.limtic.lab.repository.FileRepository;
 import com.limtic.lab.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,8 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private FileRepository fileRepository;
 
     private final Path uploadDir = Paths.get("uploads");
 
@@ -88,6 +91,10 @@ public class UserService {
         fileDoc.setOwnerId(user.getId());
         fileDoc.setUploadedAt(LocalDate.now());
 
+        // 1️⃣ Save in files collection
+        fileRepository.save(fileDoc);
+
+        // 2️⃣ Add to user's uploads
         if (user.getUploads() == null) {
             user.setUploads(new ArrayList<>());
         }
@@ -96,6 +103,7 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
 
 
     public User uploadProfilePhoto(String email, MultipartFile file) throws IOException {
