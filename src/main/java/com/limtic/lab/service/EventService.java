@@ -5,7 +5,8 @@ import com.limtic.lab.repository.EventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,9 +16,11 @@ public class EventService {
     @Autowired
     private EventRepository eventRepository;
 
+    // -------------------- CRUD --------------------
     public Event createEvent(Event event) {
-        event.setCreatedAt(new Date());
-        event.setAvailablePlaces(event.getMaxParticipants());
+        if (event.getAvailablePlaces() == null) {
+            event.setAvailablePlaces(event.getMaxParticipants());
+        }
         return eventRepository.save(event);
     }
 
@@ -50,12 +53,13 @@ public class EventService {
         eventRepository.deleteById(id);
     }
 
+    // -------------------- ENROLL USERS --------------------
     public Event enrollUser(String eventId, String userId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
 
         if (event.getEnrolledUsers() == null) {
-            event.setEnrolledUsers(new java.util.ArrayList<>());
+            event.setEnrolledUsers(new ArrayList<>());
         }
 
         if (event.getEnrolledUsers().contains(userId)) {
@@ -69,5 +73,37 @@ public class EventService {
         event.getEnrolledUsers().add(userId);
         event.setAvailablePlaces(event.getAvailablePlaces() - 1);
         return eventRepository.save(event);
+    }
+
+    // -------------------- COUNT --------------------
+    public long countEvents() {
+        return eventRepository.count();
+    }
+
+    // -------------------- SEARCH / FILTER --------------------
+    public List<Event> findByName(String name) {
+        return eventRepository.findByEventNameContainingIgnoreCase(name);
+    }
+
+    public List<Event> findByLocation(String location) {
+        return eventRepository.findByLocationContainingIgnoreCase(location);
+    }
+
+    public List<Event> findByStatus(String status) {
+        return eventRepository.findByStatus(status);
+    }
+
+    public List<Event> findByBudget(double min, double max) {
+        return eventRepository.findByBudgetBetween(min, max);
+    }
+
+    public List<Event> findByStartDateBetween(LocalDate start, LocalDate end) {
+        return eventRepository.findByStartDateBetween(start, end);
+    }
+
+    // -------------------- UPCOMING EVENTS --------------------
+    public List<Event> findUpcomingEvents() {
+        LocalDate today = LocalDate.now();
+        return eventRepository.findByStartDateGreaterThanEqual(today);
     }
 }

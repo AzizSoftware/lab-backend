@@ -5,7 +5,8 @@ import com.limtic.lab.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,9 +16,11 @@ public class ProjectService {
     @Autowired
     private ProjectRepository projectRepository;
 
+    // -------------------- CRUD --------------------
     public Project createProject(Project project) {
-        project.setCreatedAt(new Date());
-        project.setAvailableSpots(project.getMaxTeamMembers());
+        if (project.getAvailableSpots() == null) {
+            project.setAvailableSpots(project.getMaxTeamMembers());
+        }
         return projectRepository.save(project);
     }
 
@@ -49,12 +52,13 @@ public class ProjectService {
         projectRepository.deleteById(id);
     }
 
+    // -------------------- TEAM MANAGEMENT --------------------
     public Project addTeamMember(String projectId, String userId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
         if (project.getTeamMembers() == null) {
-            project.setTeamMembers(new java.util.ArrayList<>());
+            project.setTeamMembers(new ArrayList<>());
         }
 
         if (project.getTeamMembers().contains(userId)) {
@@ -68,5 +72,41 @@ public class ProjectService {
         project.getTeamMembers().add(userId);
         project.setAvailableSpots(project.getAvailableSpots() - 1);
         return projectRepository.save(project);
+    }
+
+    // -------------------- COUNT --------------------
+    public long countProjects() {
+        return projectRepository.count();
+    }
+
+    // -------------------- SEARCH / FILTER --------------------
+    public List<Project> findByName(String name) {
+        return projectRepository.findByProjectNameContainingIgnoreCase(name);
+    }
+
+    public List<Project> findByStatus(String status) {
+        return projectRepository.findByStatus(status);
+    }
+
+    public List<Project> findByBudget(double min, double max) {
+        return projectRepository.findByBudgetBetween(min, max);
+    }
+
+    public List<Project> findByStartDateAfter(LocalDate start) {
+        return projectRepository.findByStartDateAfter(start);
+    }
+
+    public List<Project> findByEndDateBefore(LocalDate end) {
+        return projectRepository.findByEndDateBefore(end);
+    }
+
+    public List<Project> findByDateRange(LocalDate start, LocalDate end) {
+        return projectRepository.findByStartDateBetween(start, end);
+    }
+
+    // -------------------- UPCOMING PROJECTS --------------------
+    public List<Project> findUpcomingProjects() {
+        LocalDate today = LocalDate.now();
+        return projectRepository.findByStartDateGreaterThanEqual(today);
     }
 }
