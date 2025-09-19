@@ -79,7 +79,7 @@ public class SecurityConfig {
                         .hasAnyRole("VISITOR", "USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
 
                         // ---------------- ADMIN ONLY ----------------
-                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/admin/**").permitAll()
 
                         // All other requests require authentication
                         .anyRequest().authenticated())

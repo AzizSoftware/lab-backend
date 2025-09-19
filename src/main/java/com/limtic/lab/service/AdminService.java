@@ -1,5 +1,6 @@
 package com.limtic.lab.service;
 
+import com.limtic.lab.dto.UserApprovalNotification;
 import com.limtic.lab.model.Event;
 
 import com.limtic.lab.model.Project;
@@ -8,9 +9,11 @@ import com.limtic.lab.model.User;
 import com.limtic.lab.repository.EventRepository;
 import com.limtic.lab.repository.ProjectRepository;
 import com.limtic.lab.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.limtic.lab.util.PasswordUtils;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,6 +35,14 @@ public class AdminService {
     @Autowired
     private EventRepository eventRepository;
 
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
+
+    
+
+     @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // -------------------- USER MANAGEMENT --------------------
 
     /**
@@ -47,19 +58,32 @@ public class AdminService {
      * @param newRole the role to assign (RoleEnum)
      */
     public User approveUserByEmail(String email, RoleEnum newRole) {
-        // Find user by email
+ 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-        // Set the new role
+        // Set role & approve
         user.setRoleEnum(newRole);
-
-        // Set status to APPROVED
         user.setStatus("APPROVED");
 
-        // Save and return updated user
-        return userRepository.save(user);
+        // Generate secure credentials (example)
+        String newPassword = PasswordUtils.generateSecurePassword(12);  // implement your secure password generator
+         user.setPassword(passwordEncoder.encode(newPassword));
+
+        User updatedUser = userRepository.save(user);
+        // Build structured Kafka notification
+        UserApprovalNotification notification = new UserApprovalNotification(
+            user.getEmail(),
+            "USER_APPROVED",
+            "Your registration has been approved. Your temporary password is: " + newPassword,
+            LocalDate.now()
+        );
+
+        kafkaProducerService.sendMessage(notification);
+
+        return updatedUser;
     }
+
 
     /**
      * Decline a pending user registration.
@@ -69,11 +93,23 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Set status to DECLINED
         user.setStatus("DECLINED");
 
-        return userRepository.save(user);
+        User updatedUser = userRepository.save(user);
+
+        // Build structured Kafka notification
+        UserApprovalNotification notification = new UserApprovalNotification(
+            user.getEmail(),
+            "USER_DECLINED",
+            "For security reasons, your registration has been declined and your account access is restricted.",
+            LocalDate.now()
+        );
+
+        kafkaProducerService.sendMessage(notification);
+
+        return updatedUser;
     }
+
 
     /**
      * Update user role for an existing user.
