@@ -1,10 +1,12 @@
 package com.limtic.lab.controller;
 
 import com.limtic.lab.config.AdminCredentialsConfig;
+import com.limtic.lab.dto.FileUploadNotification;
 import com.limtic.lab.model.FileDocument;
 import com.limtic.lab.model.RoleEnum;
 import com.limtic.lab.model.User;
 import com.limtic.lab.repository.UserRepository;
+import com.limtic.lab.service.KafkaProducerService;
 import com.limtic.lab.service.UserService;
 import com.limtic.lab.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -44,13 +46,15 @@ public class UserController {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    @Autowired
+    private final KafkaProducerService kafkaProducerService;
 
     @GetMapping
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
     // -------------------- AUTH -------------------
-     @PostMapping("/signup")
+    @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Email already in use");
@@ -60,16 +64,31 @@ public class UserController {
         user.setCreatedAt(LocalDate.now());
         user.setUpdatedAt(LocalDate.now());
 
+        String message;
+
         // ------------------ AUTO-APPROVE ADMIN ------------------
         if (user.getEmail().equalsIgnoreCase(adminConfig.getEmail())) {
             user.setRoleEnum(RoleEnum.SUPER_ADMIN);
             user.setStatus("APPROVED"); // ✅ immediately approved
+
+            message = String.format(
+                "{ \"event\": \"NEW_ADMIN_CREATED\", \"email\": \"%s\", \"status\": \"%s\" }",
+                user.getEmail(), user.getStatus()
+            );
         } else {
             user.setRoleEnum(RoleEnum.USER);
             user.setStatus("PENDING"); // normal users
+
+            message = String.format(
+                "{ \"event\": \"NEW_USER_SIGNUP\", \"email\": \"%s\", \"status\": \"%s\", \"action\": \"PLEASE_VERIFY\" }",
+                user.getEmail(), user.getStatus()
+            );
         }
 
         userRepository.save(user);
+
+        // 🔥 Send structured message to Kafka
+        kafkaProducerService.sendMessage(message);
 
         return ResponseEntity.ok(
             user.getStatus().equals("APPROVED") ?
@@ -77,7 +96,6 @@ public class UserController {
             "Registration successful. Pending admin approval."
         );
     }
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
 
@@ -110,7 +128,7 @@ public class UserController {
     }
 
     // -------------------- FILE UPLOAD --------------------
-    @PostMapping("/{email}/uploads")
+     @PostMapping("/{email}/uploads")
     public User uploadFile(
             @PathVariable String email,
             @RequestParam("file") MultipartFile file,
@@ -122,9 +140,25 @@ public class UserController {
             @RequestParam List<String> keywords,
             @RequestParam(required = false) String doi
     ) throws IOException {
-        return userService.addFileToUser(
+
+        // 1️⃣ Save the file into DB
+        User updatedUser = userService.addFileToUser(
                 email, file, title, authors, affiliations, publicationDate, abstractText, keywords, doi
         );
+
+        // 2️⃣ Build structured notification
+        FileUploadNotification notification = new FileUploadNotification(
+                email,
+                title,
+                publicationDate,
+                String.format("📄 User %s uploaded a new file: %s (published on %s)", 
+                              email, title, publicationDate)
+        );
+
+        // 3️⃣ Send to Kafka
+        kafkaProducerService.sendMessage(notification);
+
+        return updatedUser;
     }
 
     @PostMapping("/{email}/photo")
