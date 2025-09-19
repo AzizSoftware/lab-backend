@@ -2,6 +2,7 @@ package com.limtic.lab.controller;
 
 import com.limtic.lab.config.AdminCredentialsConfig;
 import com.limtic.lab.dto.FileUploadNotification;
+import com.limtic.lab.dto.UserSignupNotification;
 import com.limtic.lab.model.FileDocument;
 import com.limtic.lab.model.RoleEnum;
 import com.limtic.lab.model.User;
@@ -64,31 +65,29 @@ public class UserController {
         user.setCreatedAt(LocalDate.now());
         user.setUpdatedAt(LocalDate.now());
 
-        String message;
-
         // ------------------ AUTO-APPROVE ADMIN ------------------
+        String event;
         if (user.getEmail().equalsIgnoreCase(adminConfig.getEmail())) {
             user.setRoleEnum(RoleEnum.SUPER_ADMIN);
             user.setStatus("APPROVED"); // ✅ immediately approved
-
-            message = String.format(
-                "{ \"event\": \"NEW_ADMIN_CREATED\", \"email\": \"%s\", \"status\": \"%s\" }",
-                user.getEmail(), user.getStatus()
-            );
+            event = "NEW_ADMIN_CREATED";
         } else {
             user.setRoleEnum(RoleEnum.USER);
             user.setStatus("PENDING"); // normal users
-
-            message = String.format(
-                "{ \"event\": \"NEW_USER_SIGNUP\", \"email\": \"%s\", \"status\": \"%s\", \"action\": \"PLEASE_VERIFY\" }",
-                user.getEmail(), user.getStatus()
-            );
+            event = "NEW_USER_SIGNUP";
         }
 
         userRepository.save(user);
 
-        // 🔥 Send structured message to Kafka
-        kafkaProducerService.sendMessage(message);
+        // 2️⃣ Build structured notification
+        UserSignupNotification notification = new UserSignupNotification(
+            user.getEmail(),
+            event,
+            user.getCreatedAt()
+        );
+
+        // 3️⃣ Send to Kafka
+        kafkaProducerService.sendMessage(notification);
 
         return ResponseEntity.ok(
             user.getStatus().equals("APPROVED") ?
@@ -96,6 +95,8 @@ public class UserController {
             "Registration successful. Pending admin approval."
         );
     }
+
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
 
