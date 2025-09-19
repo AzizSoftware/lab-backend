@@ -36,12 +36,12 @@ public class AdminController {
      * @param userId the user's ID
      * @param role the role to assign (RoleEnum)
      */
-    @PutMapping("/users/{userId}/approve")
+    @PutMapping("/users/approve")
     public ResponseEntity<User> approveUser(
-            @PathVariable String userId,
+            @RequestParam String email,
             @RequestParam RoleEnum role
     ) {
-        User approvedUser = adminService.approveUser(userId, role);
+        User approvedUser = adminService.approveUserByEmail(email, role);
         return ResponseEntity.ok(approvedUser);
     }
 

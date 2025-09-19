@@ -49,24 +49,33 @@ public class UserController {
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
-    // -------------------- AUTH --------------------
+    // -------------------- AUTH -------------------
      @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Email already in use");
         }
 
-        // Normal user signup → status = PENDING, role = USER
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRoleEnum(RoleEnum.USER);
-        user.setStatus("PENDING");
         user.setCreatedAt(LocalDate.now());
         user.setUpdatedAt(LocalDate.now());
+
+        // ------------------ AUTO-APPROVE ADMIN ------------------
+        if (user.getEmail().equalsIgnoreCase(adminConfig.getEmail())) {
+            user.setRoleEnum(RoleEnum.SUPER_ADMIN);
+            user.setStatus("APPROVED"); // ✅ immediately approved
+        } else {
+            user.setRoleEnum(RoleEnum.USER);
+            user.setStatus("PENDING"); // normal users
+        }
+
         userRepository.save(user);
 
-        //todo: trigger email notification to admin about new pending user
-
-        return ResponseEntity.ok("Registration successful. Pending admin approval.");
+        return ResponseEntity.ok(
+            user.getStatus().equals("APPROVED") ?
+            "Admin account created and approved." :
+            "Registration successful. Pending admin approval."
+        );
     }
 
     @PostMapping("/login")

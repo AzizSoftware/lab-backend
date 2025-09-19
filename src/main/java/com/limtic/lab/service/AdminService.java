@@ -46,16 +46,18 @@ public class AdminService {
      * @param userId the user's ID
      * @param newRole the role to assign (RoleEnum)
      */
-    public User approveUser(String userId, RoleEnum newRole) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public User approveUserByEmail(String email, RoleEnum newRole) {
+        // Find user by email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-        // Set role using helper method
+        // Set the new role
         user.setRoleEnum(newRole);
 
         // Set status to APPROVED
         user.setStatus("APPROVED");
 
+        // Save and return updated user
         return userRepository.save(user);
     }
 
