@@ -86,15 +86,18 @@ public class AdminService {
 
 
     /**
-     * Decline a pending user registration.
-     * @param userId the user's ID
+     * Decline a pending user registration by email.
+     * @param email the user's email
      */
-    public User declineUser(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public User declineUserByEmail(String email) {
+        // Find user by email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
+        // Set status to DECLINED
         user.setStatus("DECLINED");
 
+        // Save updated user
         User updatedUser = userRepository.save(user);
 
         // Build structured Kafka notification
@@ -109,7 +112,6 @@ public class AdminService {
 
         return updatedUser;
     }
-
 
     /**
      * Update user role for an existing user.

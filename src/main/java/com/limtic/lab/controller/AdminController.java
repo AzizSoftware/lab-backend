@@ -45,12 +45,9 @@ public class AdminController {
         return ResponseEntity.ok(approvedUser);
     }
 
-    /**
-     * Decline a pending user registration.
-     */
-    @PutMapping("/users/{userId}/decline")
-    public ResponseEntity<User> declineUser(@PathVariable String userId) {
-        User declinedUser = adminService.declineUser(userId);
+   @PutMapping("/users/decline")
+    public ResponseEntity<User> declineUser(@RequestParam String email) {
+        User declinedUser = adminService.declineUserByEmail(email);
         return ResponseEntity.ok(declinedUser);
     }
 
