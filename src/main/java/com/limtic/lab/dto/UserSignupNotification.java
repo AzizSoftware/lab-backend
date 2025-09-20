@@ -34,8 +34,7 @@ public class UserSignupNotification implements BaseNotification{
     public LocalDate getCreatedAt() { return createdAt; }
 
     @Override
-    public String getType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getType'");
+     public String getType() {
+        return type;
     }
 }

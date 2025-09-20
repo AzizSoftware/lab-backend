@@ -48,11 +48,8 @@ public class UserApprovalNotification implements BaseNotification {
     public void setTimestamp(LocalDate timestamp) {
         this.timestamp = timestamp;
     }
-
     @Override
     public String getType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getType'");
+        return type;
     }
-
 }
