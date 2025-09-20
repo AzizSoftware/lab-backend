@@ -76,8 +76,8 @@ public class AdminService {
             "USER_APPROVED",
             user.getEmail(),
             "USER_APPROVED",
-            newPassword,
-            LocalDate.now()
+            LocalDate.now(),
+            newPassword
         );
 
         kafkaProducerService.sendMessage(notification);
@@ -108,8 +108,8 @@ public class AdminService {
             "USER_DECLINED",
             user.getEmail(),
             "USER_DECLINED",
-            newPassword,
-            LocalDate.now()
+            LocalDate.now(),
+            newPassword
         );
 
         kafkaProducerService.sendMessage(notification);

@@ -9,7 +9,7 @@ public class UserApprovalNotification implements BaseNotification {
     private String password;
     private LocalDate timestamp;
 
-    public UserApprovalNotification(String type,String email, String event, String paasswprd, LocalDate timestamp) {
+    public UserApprovalNotification(String type,String email, String event, LocalDate timestamp, String password) {
         this.type=type;
         this.email = email;
         this.event = event;
