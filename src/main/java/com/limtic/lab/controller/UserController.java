@@ -81,6 +81,7 @@ public class UserController {
 
         // 2️⃣ Build structured notification
         UserSignupNotification notification = new UserSignupNotification(
+            "NEW_USER_SIGNUP",    
             user.getEmail(),
             event,
             user.getCreatedAt()
@@ -149,6 +150,7 @@ public class UserController {
 
         // 2️⃣ Build structured notification
         FileUploadNotification notification = new FileUploadNotification(
+                "FILE_UPLOADED",
                 email,
                 title,
                 publicationDate,

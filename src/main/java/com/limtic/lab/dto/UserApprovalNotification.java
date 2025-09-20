@@ -2,16 +2,18 @@ package com.limtic.lab.dto;
 
 import java.time.LocalDate;
 
-public class UserApprovalNotification {
+public class UserApprovalNotification implements BaseNotification {
+    private String type;
     private String email;
     private String event;        // APPROVED or DECLINED
-    private String message;
+    private String password;
     private LocalDate timestamp;
 
-    public UserApprovalNotification(String email, String event, String message, LocalDate timestamp) {
+    public UserApprovalNotification(String type,String email, String event, String paasswprd, LocalDate timestamp) {
+        this.type=type;
         this.email = email;
         this.event = event;
-        this.message = message;
+        this.password = password;
         this.timestamp = timestamp;
     }
 
@@ -31,12 +33,12 @@ public class UserApprovalNotification {
         this.event = event;
     }
 
-    public String getMessage() {
-        return message;
+    public String getPassword() {
+        return password;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setPassword(String pwd) {
+        this.password = pwd;
     }
 
     public LocalDate getTimestamp() {
@@ -45,6 +47,12 @@ public class UserApprovalNotification {
 
     public void setTimestamp(LocalDate timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public String getType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getType'");
     }
 
 }

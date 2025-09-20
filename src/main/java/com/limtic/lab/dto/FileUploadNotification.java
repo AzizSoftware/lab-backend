@@ -9,7 +9,8 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FileUploadNotification {
+public class FileUploadNotification implements BaseNotification {
+    private String type;
     private String userEmail;
     private String title;
     private LocalDate publicationDate;

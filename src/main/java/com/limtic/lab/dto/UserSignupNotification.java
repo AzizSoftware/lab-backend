@@ -2,15 +2,16 @@ package com.limtic.lab.dto;
 
 import java.time.LocalDate;
 
-public class UserSignupNotification {
-
+public class UserSignupNotification implements BaseNotification{
+    private String type;
     private String email;
     private String event;
     private String message;
     private LocalDate createdAt;
 
     // Constructor
-    public UserSignupNotification(String email, String event, LocalDate createdAt) {
+    public UserSignupNotification(String type,String email, String event, LocalDate createdAt) {
+        this.type=type;
         this.email = email;
         this.event = event;
         this.createdAt = createdAt;
@@ -31,4 +32,10 @@ public class UserSignupNotification {
     public String getEvent() { return event; }
     public String getMessage() { return message; }
     public LocalDate getCreatedAt() { return createdAt; }
+
+    @Override
+    public String getType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getType'");
+    }
 }

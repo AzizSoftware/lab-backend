@@ -73,9 +73,10 @@ public class AdminService {
         User updatedUser = userRepository.save(user);
         // Build structured Kafka notification
         UserApprovalNotification notification = new UserApprovalNotification(
+            "USER_APPROVED",
             user.getEmail(),
             "USER_APPROVED",
-            "Your registration has been approved. Your temporary password is: " + newPassword,
+            newPassword,
             LocalDate.now()
         );
 
@@ -97,14 +98,17 @@ public class AdminService {
         // Set status to DECLINED
         user.setStatus("DECLINED");
 
+        String newPassword = PasswordUtils.generateSecurePassword(12);  // implement your secure password generator
+        user.setPassword(passwordEncoder.encode(newPassword));
         // Save updated user
         User updatedUser = userRepository.save(user);
 
         // Build structured Kafka notification
         UserApprovalNotification notification = new UserApprovalNotification(
+            "USER_DECLINED",
             user.getEmail(),
             "USER_DECLINED",
-            "For security reasons, your registration has been declined and your account access is restricted.",
+            newPassword,
             LocalDate.now()
         );
 
