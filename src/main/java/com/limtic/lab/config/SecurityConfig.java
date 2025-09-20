@@ -37,8 +37,10 @@ public class SecurityConfig {
                         .hasAnyRole("User", "PERMANENT", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/users/{email}")
                         .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/users/{email}/uploads", "/api/users/{email}/photo")
+                        .requestMatchers(HttpMethod.POST,"/api/users/{email}/photo")
+                        
                         .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/users/{email}/uploads").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/uploads/**")
                         .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/users/{email}/role")
