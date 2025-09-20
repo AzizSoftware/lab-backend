@@ -148,15 +148,19 @@ public class UserController {
                 email, file, title, authors, affiliations, publicationDate, abstractText, keywords, doi
         );
 
-        // 2️⃣ Build structured notification
+       List<String> allUserEmails = userService.getAllUserEmails();
+
+        // 3️⃣ Build structured notification with recipient emails
         FileUploadNotification notification = new FileUploadNotification(
                 "FILE_UPLOADED",
                 email,
                 title,
                 publicationDate,
-                String.format("📄 User %s uploaded a new file: %s (published on %s)", 
-                              email, title, publicationDate)
+                String.format("📄 User %s uploaded a new file: %s (published on %s)",
+                        email, title, publicationDate),
+                allUserEmails // Add the list of emails here
         );
+
 
         // 3️⃣ Send to Kafka
         kafkaProducerService.sendMessage(notification);

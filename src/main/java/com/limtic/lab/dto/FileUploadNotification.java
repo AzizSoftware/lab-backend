@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -15,4 +16,5 @@ public class FileUploadNotification implements BaseNotification {
     private String title;
     private LocalDate publicationDate;
     private String message;
+    private List<String> recipientEmails;
 }

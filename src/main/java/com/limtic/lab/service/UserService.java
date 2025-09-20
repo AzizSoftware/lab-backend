@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -25,6 +26,13 @@ public class UserService {
 
      public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    public List<String> getAllUserEmails() {
+        return userRepository.findAll()
+                .stream()
+                .map(User::getEmail)
+                .collect(Collectors.toList());
     }
 
     public UserService() {
