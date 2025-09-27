@@ -66,13 +66,14 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "SUPER_ADMIN")
 
                         // ---------------- EVENTS ----------------
-                        .requestMatchers(HttpMethod.GET, "/api/events/**")
-                        .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/events").hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/events/{id}")
-                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/events/{id}")
-                        .hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
+                        //
+                        .requestMatchers(HttpMethod.POST, "/api/events").permitAll()
+                        
+                        .requestMatchers(HttpMethod.PUT, "/api/events/{id}").permitAll()
+                        //.hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/events/{id}").permitAll()
+                        //.hasAnyRole("PERMANENT", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/events/{id}/enroll/**")
                         .hasAnyRole("USER", "PERMANENT", "ADMIN", "SUPER_ADMIN")
 
@@ -83,8 +84,9 @@ public class SecurityConfig {
                         // ---------------- ADMIN ONLY ----------------
                         .requestMatchers("/api/admin/**").permitAll()
 
-                        // All other requests require authentication
-                        .anyRequest().authenticated())
+                        
+                       .anyRequest().permitAll() //.authenticated()
+                        )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
