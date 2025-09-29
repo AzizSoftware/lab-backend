@@ -15,21 +15,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:4200")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -54,7 +56,7 @@ public class UserController {
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
-    // -------------------- AUTH -------------------
+
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
@@ -65,60 +67,50 @@ public class UserController {
         user.setCreatedAt(LocalDate.now());
         user.setUpdatedAt(LocalDate.now());
 
-        // ------------------ AUTO-APPROVE ADMIN ------------------
         String event;
         if (user.getEmail().equalsIgnoreCase(adminConfig.getEmail())) {
             user.setRoleEnum(RoleEnum.SUPER_ADMIN);
-            user.setStatus("APPROVED"); // ✅ immediately approved
+            user.setStatus("APPROVED");
             event = "NEW_ADMIN_CREATED";
         } else {
             user.setRoleEnum(RoleEnum.USER);
-            user.setStatus("PENDING"); // normal users
+            user.setStatus("PENDING");
             event = "NEW_USER_SIGNUP";
         }
 
         userRepository.save(user);
 
-        // 2️⃣ Build structured notification
         UserSignupNotification notification = new UserSignupNotification(
-            "NEW_USER_SIGNUP",    
+            "NEW_USER_SIGNUP",
             user.getEmail(),
             event,
             user.getCreatedAt()
         );
 
-        // 3️⃣ Send to Kafka
         kafkaProducerService.sendMessage(notification);
 
         return ResponseEntity.ok(
-            user.getStatus().equals("APPROVED") ?
-            "Admin account created and approved." :
-            "Registration successful. Pending admin approval."
+            user.getStatus().equals("APPROVED")
+                ? "Admin account created and approved."
+                : "Registration successful. Pending admin approval."
         );
     }
 
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
-
-        // -------------------- Admin login --------------------
         if (loginRequest.getEmail().equals(adminConfig.getEmail()) &&
             passwordEncoder.matches(loginRequest.getPassword(), adminConfig.getPassword())) {
-
             String token = jwtUtil.generateToken(adminConfig.getEmail(), adminConfig.getRole());
             return ResponseEntity.ok(token);
         }
 
-        // -------------------- Normal user login --------------------
         return userRepository.findByEmail(loginRequest.getEmail())
                 .filter(u -> passwordEncoder.matches(loginRequest.getPassword(), u.getPassword()))
-                .filter(u -> "APPROVED".equals(u.getStatus())) // only approved users
+                .filter(u -> "APPROVED".equals(u.getStatus()))
                 .map(u -> ResponseEntity.ok(jwtUtil.generateToken(u.getEmail(), u.getRole())))
                 .orElse(ResponseEntity.status(401).body("Invalid credentials or not approved"));
     }
 
-
-    // -------------------- USER INFO --------------------
     @GetMapping("/{email}")
     public Optional<User> getUserByEmail(@PathVariable String email) {
         return userService.getByEmail(email);
@@ -129,8 +121,7 @@ public class UserController {
         return userService.updateUser(email, userData);
     }
 
-    // -------------------- FILE UPLOAD --------------------
-     @PostMapping("/{email}/uploads")
+    @PostMapping("/{email}/uploads")
     public User uploadFile(
             @PathVariable String email,
             @RequestParam("file") MultipartFile file,
@@ -140,31 +131,24 @@ public class UserController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate publicationDate,
             @RequestParam String abstractText,
             @RequestParam List<String> keywords,
-            @RequestParam(required = false) String doi
+            @RequestParam(required = false) String doi,
+            @RequestParam String fileType
     ) throws IOException {
-
-        // 1️⃣ Save the file into DB
         User updatedUser = userService.addFileToUser(
-                email, file, title, authors, affiliations, publicationDate, abstractText, keywords, doi
+            email, file, title, authors, affiliations, publicationDate, abstractText, keywords, doi, fileType
         );
 
-       List<String> allUserEmails = userService.getAllUserEmails();
-
-        // 3️⃣ Build structured notification with recipient emails
+        List<String> allUserEmails = userService.getAllUserEmails();
         FileUploadNotification notification = new FileUploadNotification(
-                "FILE_UPLOADED",
-                email,
-                title,
-                publicationDate,
-                String.format("📄 User %s uploaded a new file: %s (published on %s)",
-                        email, title, publicationDate),
-                allUserEmails // Add the list of emails here
+            "FILE_UPLOADED",
+            email,
+            title,
+            publicationDate,
+            String.format("📄 User %s uploaded a new file: %s (published on %s)", email, title, publicationDate),
+            allUserEmails
         );
 
-
-        // 3️⃣ Send to Kafka
         kafkaProducerService.sendMessage(notification);
-
         return updatedUser;
     }
 
@@ -178,15 +162,32 @@ public class UserController {
     }
 
     @GetMapping("/uploads/{filename:.+}")
-    public Resource downloadFile(@PathVariable String filename) {
-        Path filePath = userService.getFilePath(filename);
-        Resource resource = new PathResource(filePath);
+    public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
+        try {
+            if (filename == null || filename.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(null);
+            }
+            Path filePath = userService.getFilePath(filename);
+            Resource resource = new PathResource(filePath);
 
-        if (!resource.exists()) {
-            throw new IllegalArgumentException("File not found: " + filename);
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = "application/octet-stream";
+            try {
+                contentType = Files.probeContentType(filePath);
+            } catch (IOException e) {
+                // Fallback to default content type
+            }
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
         }
-
-        return resource;
     }
 
     @GetMapping("/uploads/recent")
@@ -194,11 +195,10 @@ public class UserController {
         return userService.getRecentUploads(days);
     }
 
-    // -------------------- ROLE MANAGEMENT --------------------
     @PutMapping("/{email}/role")
     public ResponseEntity<User> updateUserRole(
             @PathVariable String email,
-            @RequestParam String role // e.g., "USER" or "ADMIN"
+            @RequestParam String role
     ) {
         Optional<User> optionalUser = userService.getByEmail(email);
         if (optionalUser.isEmpty()) {

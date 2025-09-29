@@ -53,6 +53,8 @@ public class FileService {
 
     public FileDocument updateFile(String id, FileDocument updatedFile) {
         return fileRepository.findById(id).map(file -> {
+            file.setFilename(updatedFile.getFilename());
+            file.setFileType(updatedFile.getFileType());
             file.setTitle(updatedFile.getTitle());
             file.setAuthors(updatedFile.getAuthors());
             file.setAffiliations(updatedFile.getAffiliations());

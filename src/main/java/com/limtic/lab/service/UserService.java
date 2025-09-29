@@ -7,7 +7,6 @@ import com.limtic.lab.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
@@ -21,6 +20,9 @@ public class UserService {
     private UserRepository userRepository;
     @Autowired
     private FileRepository fileRepository;
+
+    @Autowired
+    private FileTypeService fileTypeService;
 
     private final Path uploadDir = Paths.get("uploads");
 
@@ -77,7 +79,8 @@ public class UserService {
         LocalDate publicationDate,
         String abstractText,
         List<String> keywords,
-        String doi
+        String doi,
+        String fileType
     ) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
@@ -89,6 +92,9 @@ public class UserService {
                 .orElse(User.builder().email(email).createdAt(LocalDate.now()).build());
 
         FileDocument fileDoc = new FileDocument();
+        fileDoc.setId(UUID.randomUUID().toString());
+        fileDoc.setFilename(uniqueFilename); // Set unique filename
+        fileDoc.setFileType(fileType != null ? fileType.toLowerCase() : "other"); // Set fileType
         fileDoc.setTitle(title != null ? title : originalFilename);
         fileDoc.setAuthors(authors);
         fileDoc.setAffiliations(affiliations);
@@ -99,10 +105,13 @@ public class UserService {
         fileDoc.setOwnerId(user.getId());
         fileDoc.setUploadedAt(LocalDate.now());
 
-        // 1️⃣ Save in files collection
+        // Add custom fileType to the list
+        fileTypeService.addFileType(fileType);
+
+        // Save in files collection
         fileRepository.save(fileDoc);
 
-        // 2️⃣ Add to user's uploads
+        // Add to user's uploads
         if (user.getUploads() == null) {
             user.setUploads(new ArrayList<>());
         }
