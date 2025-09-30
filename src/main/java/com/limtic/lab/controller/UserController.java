@@ -3,7 +3,9 @@ package com.limtic.lab.controller;
 import com.limtic.lab.config.AdminCredentialsConfig;
 import com.limtic.lab.dto.FileUploadNotification;
 import com.limtic.lab.dto.UserSignupNotification;
+import com.limtic.lab.model.Event;
 import com.limtic.lab.model.FileDocument;
+import com.limtic.lab.model.Project;
 import com.limtic.lab.model.RoleEnum;
 import com.limtic.lab.model.User;
 import com.limtic.lab.repository.UserRepository;
@@ -87,7 +89,7 @@ public class UserController {
             user.getCreatedAt()
         );
 
-        kafkaProducerService.sendMessage(notification);
+        //kafkaProducerService.sendMessage(notification);
 
         return ResponseEntity.ok(
             user.getStatus().equals("APPROVED")
@@ -208,5 +210,15 @@ public class UserController {
         user.setRole(role.toUpperCase());
         userService.updateUser(email, user);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/{email}/enrolled-projects")
+    public List<Project> getEnrolledProjects(@PathVariable String email) {
+        return userService.getEnrolledProjects(email);
+    }
+
+    @GetMapping("/{email}/enrolled-events")
+    public List<Event> getEnrolledEvents(@PathVariable String email) {
+        return userService.getEnrolledEvents(email);
     }
 }

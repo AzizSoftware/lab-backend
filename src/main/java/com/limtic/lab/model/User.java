@@ -5,6 +5,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -41,7 +42,10 @@ public class User {
 
     // All documents uploaded by this user
     private List<FileDocument> uploads;
+    private List<String> enrolledEvents = new ArrayList<>();
 
+    // Enrolled projects (project IDs)
+    private List<String> enrolledProjects = new ArrayList<>();
     // ---------------------------
     // Helper methods for enum
     // ---------------------------

@@ -1,7 +1,9 @@
 package com.limtic.lab.service;
 
 import com.limtic.lab.model.Project;
+import com.limtic.lab.model.User;
 import com.limtic.lab.repository.ProjectRepository;
+import com.limtic.lab.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,9 @@ public class ProjectService {
 
     @Autowired
     private ProjectRepository projectRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // -------------------- CRUD --------------------
     public Project createProject(Project project) {
@@ -71,7 +76,24 @@ public class ProjectService {
 
         project.getTeamMembers().add(userId);
         project.setAvailableSpots(project.getAvailableSpots() - 1);
-        return projectRepository.save(project);
+        projectRepository.save(project);
+
+        // Update user's enrolledProjects
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            if (user.getEnrolledProjects() == null) {
+                user.setEnrolledProjects(new ArrayList<>());
+            }
+            if (!user.getEnrolledProjects().contains(projectId)) {
+                user.getEnrolledProjects().add(projectId);
+                userRepository.save(user);
+            }
+        } else {
+            throw new RuntimeException("User not found");
+        }
+
+        return project;
     }
 
     // -------------------- COUNT --------------------

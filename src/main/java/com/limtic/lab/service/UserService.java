@@ -1,12 +1,17 @@
 package com.limtic.lab.service;
 
 import com.limtic.lab.model.FileDocument;
+import com.limtic.lab.model.Project;
 import com.limtic.lab.model.User;
+import com.limtic.lab.repository.EventRepository;
 import com.limtic.lab.repository.FileRepository;
+import com.limtic.lab.repository.ProjectRepository;
 import com.limtic.lab.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.limtic.lab.model.Event;
+
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
@@ -20,13 +25,26 @@ public class UserService {
     private UserRepository userRepository;
     @Autowired
     private FileRepository fileRepository;
+    @Autowired
+    private ProjectRepository projectRepository;
+    @Autowired
+    private EventRepository eventRepository;
+
 
     @Autowired
     private FileTypeService fileTypeService;
 
     private final Path uploadDir = Paths.get("uploads");
 
-     public List<User> getAllUsers() {
+    public UserService() {
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot create upload directory", e);
+        }
+    }
+
+    public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
@@ -35,14 +53,6 @@ public class UserService {
                 .stream()
                 .map(User::getEmail)
                 .collect(Collectors.toList());
-    }
-
-    public UserService() {
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Cannot create upload directory", e);
-        }
     }
 
     public Optional<User> getByEmail(String email) {
@@ -121,8 +131,6 @@ public class UserService {
         return userRepository.save(user);
     }
 
-
-
     public User uploadProfilePhoto(String email, MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
@@ -161,4 +169,30 @@ public class UserService {
         }
         return recentUploads;
     }
+
+    // New method to display user's enrolled projects
+    public List<Project> getEnrolledProjects(String email) {
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            List<String> projectIds = user.getEnrolledProjects();
+            if (projectIds != null && !projectIds.isEmpty()) {
+                return projectRepository.findAllById(projectIds);
+            }
+        }
+        return new ArrayList<>();
+    }
+    public List<Event> getEnrolledEvents(String email) {
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            List<String> eventIds = user.getEnrolledEvents();
+            if (eventIds != null && !eventIds.isEmpty()) {
+                return eventRepository.findAllById(eventIds);
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    
 }

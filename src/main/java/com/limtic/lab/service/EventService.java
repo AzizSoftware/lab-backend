@@ -2,6 +2,8 @@ package com.limtic.lab.service;
 
 import com.limtic.lab.model.Event;
 import com.limtic.lab.repository.EventRepository;
+import com.limtic.lab.repository.UserRepository;
+import com.limtic.lab.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ public class EventService {
 
     @Autowired
     private EventRepository eventRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     // -------------------- CRUD --------------------
     public Event createEvent(Event event) {
@@ -72,7 +76,24 @@ public class EventService {
 
         event.getEnrolledUsers().add(userId);
         event.setAvailablePlaces(event.getAvailablePlaces() - 1);
-        return eventRepository.save(event);
+        eventRepository.save(event);
+
+        // Update user's enrolledEvents
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            if (user.getEnrolledEvents() == null) {
+                user.setEnrolledEvents(new ArrayList<>());
+            }
+            if (!user.getEnrolledEvents().contains(eventId)) {
+                user.getEnrolledEvents().add(eventId);
+                userRepository.save(user);
+            }
+        } else {
+            throw new RuntimeException("User not found");
+        }
+
+        return event;
     }
 
     // -------------------- COUNT --------------------
