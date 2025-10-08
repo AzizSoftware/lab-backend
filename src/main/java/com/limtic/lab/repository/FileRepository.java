@@ -24,4 +24,8 @@ public interface FileRepository extends MongoRepository<FileDocument, String> {
 
     // Find files published before a certain date
     List<FileDocument> findByPublicationDateBefore(LocalDate date);
+
+    List<FileDocument> findByRanking(String ranking); 
+    
+    List<FileDocument> findByFileType(String fileType);
 }

@@ -5,6 +5,7 @@ import com.limtic.lab.repository.FileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,14 @@ public class FileService {
         return fileRepository.findByKeywordsContainingIgnoreCase(keyword);
     }
 
+    public List<FileDocument> findByType(String type){
+        return fileRepository.findByFileType(type);
+    }
+
+    public List<FileDocument> findByRank(String rank){
+        return fileRepository.findByRanking(rank);
+    }
+    
     public List<FileDocument> findByAuthor(String author) {
         return fileRepository.findByAuthorsContainingIgnoreCase(author);
     }

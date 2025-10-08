@@ -25,4 +25,5 @@ public class FileDocument {
     private String doi;
     private String ownerId; // Reference to User.id
     private LocalDate uploadedAt;
+    private String ranking;
 }

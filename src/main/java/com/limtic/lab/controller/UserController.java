@@ -221,4 +221,52 @@ public class UserController {
     public List<Event> getEnrolledEvents(@PathVariable String email) {
         return userService.getEnrolledEvents(email);
     }
+
+
+     @GetMapping("/{email}/profile-photo")
+        public ResponseEntity<Resource> getProfilePhoto(@PathVariable String email) {
+            Optional<User> optionalUser = userService.getByEmail(email);
+            if (optionalUser.isEmpty() || optionalUser.get().getImageUrl() == null) {
+                // Return a placeholder image
+                Path placeholderPath = userService.getFilePath("placeholder.png");
+                Resource resource = new PathResource(placeholderPath);
+                if (!resource.exists()) {
+                    return ResponseEntity.notFound().build();
+                }
+                return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"placeholder.png\"")
+                    .body(resource);
+            }
+            User user = optionalUser.get();
+            
+            // FIX: Get the filename directly from user.getImageUrl(), as the Service now saves the filename itself.
+            String filename = user.getImageUrl();
+            
+            Path filePath = userService.getFilePath(filename);
+            Resource resource = new PathResource(filePath);
+            if (!resource.exists()) {
+                // Fallback to placeholder
+                Path placeholderPath = userService.getFilePath("placeholder.png");
+                resource = new PathResource(placeholderPath);
+                if (!resource.exists()) {
+                    return ResponseEntity.notFound().build();
+                }
+                return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"placeholder.png\"")
+                    .body(resource);
+            }
+            String contentType = "application/octet-stream";
+            try {
+                contentType = Files.probeContentType(filePath);
+            } catch (IOException e) {
+                // Fallback to default content type
+            }
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(resource);
+        }
+
 }

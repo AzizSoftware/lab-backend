@@ -132,20 +132,24 @@ public class UserService {
     }
 
     public User uploadProfilePhoto(String email, MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("Photo cannot be empty");
+        }
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
         String uniqueFilename = "profile_" + email + "_" + UUID.randomUUID() + extension;
         Path filePath = uploadDir.resolve(uniqueFilename);
-
-        Files.write(filePath, file.getBytes());
-
-        String imageUrl = "/api/users/uploads/" + uniqueFilename;
-
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        
+        // --- FIX 1: Save the UNIQUE FILENAME instead of the full URL endpoint ---
+        String imageFilename = uniqueFilename; 
+        
         User user = userRepository.findByEmail(email)
-                .orElse(User.builder().email(email).createdAt(LocalDate.now()).build());
-        user.setImageUrl(imageUrl);
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // This is the property that holds the actual filename on disk
+        user.setImageUrl(imageFilename); 
         user.setUpdatedAt(LocalDate.now());
-
         return userRepository.save(user);
     }
 
@@ -170,7 +174,7 @@ public class UserService {
         return recentUploads;
     }
 
-    // New method to display user's enrolled projects
+
     public List<Project> getEnrolledProjects(String email) {
         Optional<User> optionalUser = userRepository.findByEmail(email);
         if (optionalUser.isPresent()) {

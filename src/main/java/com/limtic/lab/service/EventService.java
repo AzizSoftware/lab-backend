@@ -78,7 +78,6 @@ public class EventService {
         event.setAvailablePlaces(event.getAvailablePlaces() - 1);
         eventRepository.save(event);
 
-        // Update user's enrolledEvents
         Optional<User> optionalUser = userRepository.findById(userId);
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
@@ -95,7 +94,6 @@ public class EventService {
 
         return event;
     }
-
     // -------------------- COUNT --------------------
     public long countEvents() {
         return eventRepository.count();

@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+
 @RestController
 @RequestMapping("/api/files")
 @CrossOrigin(origins = "*")
@@ -83,5 +84,18 @@ public class FileController {
     public List<FileDocument> searchByDateBefore(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return fileService.findByDateBefore(date);
     }
+
+    //search by ranking
+    @GetMapping("/search/ranking")
+    public List<FileDocument> searchByRank(@RequestParam String rank) {
+        return fileService.findByRank(rank);
+    }
+
+    @GetMapping("search/type")
+    public List<FileDocument> searchByType(@RequestParam String type) {
+        return fileService.findByType(type);
+    }
+    
+    
 }
 
